@@ -1,0 +1,11 @@
+{
+  "name": "club-functions",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node node_modules/tape/bin/tape test/*_tests.js"
+  },
+  "author": "",
+  "license": "ISC"
+}

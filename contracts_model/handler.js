@@ -10,6 +10,7 @@
                 this.log = log;
                 this.writer = writer;
                 this.eventFetcher = eventFetcher;
+                this.versionWriter = versionWriter;
             };
         
         process(currentVersion, newEvent){
@@ -19,17 +20,21 @@
                     var version = keyConverter.parseVersion(newEvent.RowKey['_']);
                     var eventsToProcess = this.eventFetcher(clubId, currentVersion, version)
                         .then((events) => {
+                            var promises = [];
                             events.forEach((event) => {
                                 var payload = JSON.parse(event.payload['_']);
                                 this.log(`EVENT ${JSON.stringify(payload)}`);
                                 var fromYear = keyConverter.parseRound(payload.FromRound).year;
                                 var toYear = keyConverter.parseRound(payload.ToRound).year;
-                                this.writer(clubId, toYear, event.payload).catch((err) => {
+                                promises.push(this.writer(clubId, toYear, event.payload).catch((err) => {
                                     this.log(`Failed to write event ${err}\n${err.stack}`);
-                                });
+                                }));
                             });
-                            // this should WhenAll on the this.writer promises and accept when done
-                            accept();                
+                            Promise.all(promises).then(() => {
+                                this.versionWriter(clubId, version).then(
+                                    () => {accept();}
+                                );
+                            });
                         }).catch((err) => {
                             this.log(`Failed to fetch events ${err} ${err.stack}`);
                             reject(`Failed to fetch events ${err}`);

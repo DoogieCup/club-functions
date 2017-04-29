@@ -4,7 +4,7 @@
     var eventBuilder = require('./eventBuilder');
     module.exports = class{
         constructor(log){
-            this.events = new Map();
+            this.events = {};
             this.log = log;
         };
 
@@ -13,7 +13,7 @@
                 this.log(`Writing ${clubId} ${year} ${JSON.stringify(contract)}`);
                 return new Promise((accept, reject) => {
                     try{
-                        this.events.set({clubId: clubId, year: year}, contract);
+                        this.events[clubId + '|' + String(year)] = contract;
                         accept();
                     } catch(err) {
                         reject(err);

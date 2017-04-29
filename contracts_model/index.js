@@ -19,7 +19,7 @@
                 .where(q);
 
             var result = new Promise((fulfill, reject) => {
-                tableService.queryEntities('ClubEvents', query, null, function(err, result){
+                tableService.queryEntities('clubEvents', query, null, function(err, result){
                     if (err){reject(err);}
                     fulfill(result.entries);
                 });
@@ -87,13 +87,13 @@
 
             return result;
         };
-    };
 
-    var handler = new Handler(context.log,
+        var handler = new Handler(context.log,
             eventFetcher,
             writer,
             versionWriter);
 
+        // This needs to be based on the last known version not 0
         handler.process(0, event)
             .then(()=>{
                 context.done(null);
@@ -101,4 +101,5 @@
                 context.log(`Process faulted ${JSON.stringify(err)}`);
                 context.done(err);
             });
+    };
 })();

@@ -20,17 +20,23 @@
                     var version = keyConverter.parseVersion(newEvent.RowKey['_']);
                     var eventsToProcess = this.eventFetcher(clubId, currentVersion, version)
                         .then((events) => {
-                            var promises = [];
+                            var currentPromise = new Promise((accept, reject) => {accept()});
                             events.forEach((event) => {
                                 var payload = JSON.parse(event.Payload['_']);
                                 this.log(`EVENT ${JSON.stringify(payload)}`);
                                 var fromYear = keyConverter.parseRound(payload.FromRound).year;
                                 var toYear = keyConverter.parseRound(payload.ToRound).year;
-                                promises.push(this.writer(clubId, toYear, payload).catch((err) => {
-                                    this.log(`Failed to write event ${err}\n${err.stack}`);
-                                }));
+                                currentPromise.then(() => {
+                                    currentPromise = this.writer(clubId, toYear, payload).catch((err) => {
+                                        this.log(`Failed to write event ${err}\n${err.stack}`);
+                                    })
+                                }).catch((err) => {
+                                    reject(err);
+                                    return;
+                                });
                             });
-                            Promise.all(promises).then(() => {
+
+                            currentPromise.then(() => {
                                 this.versionWriter(clubId, version).then(
                                     () => {accept();}
                                 );

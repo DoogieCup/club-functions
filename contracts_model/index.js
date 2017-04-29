@@ -29,7 +29,7 @@
         };
 
         var writer = (clubId, year, contract) => {
-            var tableService = azure.createTableService(connectionString);
+            let tableService = azure.createTableService(connectionString);
             context.log(`Asked to write ${clubId} ${year} ${JSON.stringify(contract)}`);
             var result = (new Promise((fulfill, reject)=>{
                 if (readTableCreated){
@@ -47,15 +47,30 @@
                 var entity = {
                     PartitionKey: entGen.String(String(clubId)),
                     RowKey: entGen.String(String(year)),
-                    Contract: JSON.stringify(contract)
+                    Contracts: JSON.stringify([contract])
                 };
 
-                tableService.insertEntity('ContractsReadModels', entity, function(error, result, response) {
-                    if (error) {
-                        reject(error);
+                tableService.retrieveEntity('ContractsReadModels', String(clubId), String(year), function(error, result, response){
+                    if (error && response.statusCode === 404){
+                        tableService.insertEntity('ContractsReadModels', entity, function(error, insertResult, response) {
+                            if (error) {
+                                reject(error);
+                            }
+                            context.log(`New contract written ${clubId} ${year} ${JSON.stringify(contract)}`);
+                            fulfill();
+                        });
+                        return;
                     }
-                    context.log(`New contract written ${clubId} ${year} ${JSON.stringify(contract)}`);
-                    fulfill();
+
+                    context.log(`Found existing entry ${JSON.stringify(result.Contracts)}`);
+                    result.Contracts['_'] = JSON.stringify(JSON.parse(result.Contracts['_']).push(contract));
+                    tableService.replaceEntity('ContractsReadModels', result, {checkEtag: true}, function(error, updateResult, response){
+                        if (error){
+                            reject(error);
+                        }
+                        context.log(`Updated contracts ${clubId} ${year} ${result.Contracts}`);
+                        fulfill();
+                    });
                 });
             })});
 
@@ -63,29 +78,29 @@
         };
 
         var versionWriter = (clubId, version) => {
-            let tableService = azure.createTableService(connectionString);
-            var result = (new Promise((fulfill, reject)=>{
+            return new Promise((accept, reject) => {
+                let tableService = azure.createTableService(connectionString);
                 tableService.createTableIfNotExists('ContractsReadVersion', function(error, result, response) {
-                    if (error) {reject(error);}
-                    context.log(`Ensured ContractsReadVersion table, result ${JSON.stringify(result)}`);
-                    fulfill();
-                });
-            })).then(() => {return new Promise((fulfill, reject) => {
-                var versionRow = {
-                    PartitionKey: entGen.String(String(year)),
-                    RowKey: entGen.String(String(version))
-                };
-
-                tableService.insertEntity('ContractsReadVersion', versionRow, function(error, result, response) {
                     if (error) {
                         reject(error);
+                        return;
                     }
-                    context.log(`New version written ${year} ${version}`);
-                    fulfill();
-                });
-            })});
+                    context.log(`Ensured ContractsReadVersion table, result ${JSON.stringify(result)}`);
+                    var versionRow = {
+                        PartitionKey: entGen.String(String(year)),
+                        RowKey: entGen.String(String(version))
+                    };
 
-            return result;
+                    tableService.insertEntity('ContractsReadVersion', versionRow, function(error, result, response) {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        context.log(`New version written ${year} ${version}`);
+                        fulfill();
+                    });
+                });
+            });
         };
 
         var handler = new Handler(context.log,

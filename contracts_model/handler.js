@@ -22,7 +22,7 @@
                         .then((events) => {
                             var promises = [];
                             events.forEach((event) => {
-                                var payload = JSON.parse(event.payload['_']);
+                                var payload = JSON.parse(event.Payload['_']);
                                 this.log(`EVENT ${JSON.stringify(payload)}`);
                                 var fromYear = keyConverter.parseRound(payload.FromRound).year;
                                 var toYear = keyConverter.parseRound(payload.ToRound).year;

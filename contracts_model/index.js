@@ -54,7 +54,7 @@
                     if (error) {
                         reject(error);
                     }
-                    context.log(`New contract written ${playerId} ${round} ${JSON.stringify(contract)}`);
+                    context.log(`New contract written ${clubId} ${year} ${JSON.stringify(contract)}`);
                     fulfill();
                 });
             })});

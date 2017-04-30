@@ -26,10 +26,8 @@
                                 this.log(`EVENT ${JSON.stringify(payload)}`);
                                 var fromYear = keyConverter.parseRound(payload.FromRound).year;
                                 var toYear = keyConverter.parseRound(payload.ToRound).year;
-                                currentPromise.then(() => {
-                                    currentPromise = this.writer(clubId, toYear, payload).catch((err) => {
-                                        this.log(`Failed to write event ${err}\n${err.stack}`);
-                                    })
+                                currentPromise = currentPromise.then(() => {
+                                    return this.writer(clubId, toYear, payload);
                                 }).catch((err) => {
                                     reject(err);
                                     return;

@@ -62,13 +62,15 @@
                         return;
                     }
 
-                    context.log(`Found existing entry ${JSON.stringify(result.Contracts)}`);
-                    result.Contracts['_'] = JSON.stringify(JSON.parse(result.Contracts['_']).push(contract));
+                    var contracts = JSON.parse(result.Contracts['_']);
+                    context.log(`Found existing entry ${JSON.stringify(contracts)}`);
+                    contracts.push(contract);
+                    result.Contracts['_'] = JSON.stringify(contracts);
                     tableService.replaceEntity('ContractsReadModels', result, {checkEtag: true}, function(error, updateResult, response){
                         if (error){
                             reject(error);
                         }
-                        context.log(`Updated contracts ${clubId} ${year} ${result.Contracts}`);
+                        context.log(`Updated contracts ${clubId} ${year} ${JSON.stringify(result.Contracts['_'])}`);
                         fulfill();
                     });
                 });
@@ -87,7 +89,7 @@
                     }
                     context.log(`Ensured ContractsReadVersion table, result ${JSON.stringify(result)}`);
                     var versionRow = {
-                        PartitionKey: entGen.String(String(year)),
+                        PartitionKey: entGen.String(String(clubId)),
                         RowKey: entGen.String(String(version))
                     };
 
@@ -96,8 +98,8 @@
                             reject(error);
                             return;
                         }
-                        context.log(`New version written ${year} ${version}`);
-                        fulfill();
+                        context.log(`New version written ${clubId} ${version}`);
+                        accept();
                     });
                 });
             });

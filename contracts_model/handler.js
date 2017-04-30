@@ -26,12 +26,16 @@
                                 this.log(`EVENT ${JSON.stringify(payload)}`);
                                 var fromYear = keyConverter.parseRound(payload.FromRound).year;
                                 var toYear = keyConverter.parseRound(payload.ToRound).year;
-                                currentPromise = currentPromise.then(() => {
-                                    return this.writer(clubId, toYear, payload);
-                                }).catch((err) => {
-                                    reject(err);
-                                    return;
-                                });
+
+                                for (var i=fromYear;i<=toYear;i++){
+                                    this.log(`Writing Year ${i} FY ${fromYear} TY ${toYear} E ${JSON.stringify(payload)}`);
+                                    currentPromise = currentPromise.then(() => {
+                                        return this.writer(clubId, i, payload);
+                                    }).catch((err) => {
+                                        reject(err);
+                                        return;
+                                    });
+                                }
                             });
 
                             currentPromise.then(() => {

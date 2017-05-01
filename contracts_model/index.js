@@ -11,6 +11,7 @@
     module.exports = function(context, event) {
         var eventFetcher = (id, knownVersion, newVersion) => {
             let tableService = azure.createTableService(connectionString);
+            let tableName = 'clubEvents';
             context.log(`Executing event fetcher Id ${id} Known Version ${knownVersion} new version ${newVersion}`);
             
             var q = `PartitionKey eq '${String(id)}' and RowKey gt '${keyConverter.toVersionKey(knownVersion)}' and RowKey le '${keyConverter.toVersionKey(newVersion)}'`;
@@ -19,7 +20,7 @@
                 .where(q);
 
             var result = new Promise((fulfill, reject) => {
-                tableService.queryEntities('clubEvents', query, null, function(err, result){
+                tableService.queryEntities(tableName, query, null, function(err, result){
                     if (err){reject(err);}
                     fulfill(result.entries);
                 });
@@ -29,6 +30,7 @@
         };
 
         var writer = (clubId, year, contract) => {
+            let tableName = 'ContractsReadModels';
             let tableService = azure.createTableService(connectionString);
             context.log(`Asked to write ${clubId} ${year} ${JSON.stringify(contract)}`);
             var result = (new Promise((fulfill, reject)=>{
@@ -37,7 +39,7 @@
                     return;
                 }
 
-                tableService.createTableIfNotExists('ContractsReadModels', function(error, result, response) {
+                tableService.createTableIfNotExists(tableName, function(error, result, response) {
                     if (error) {reject(error);}
                     context.log(`Ensured ContractsReadModels table, result ${JSON.stringify(result)}`);
                     readTableCreated = true;
@@ -50,9 +52,9 @@
                     Contracts: JSON.stringify([contract])
                 };
 
-                tableService.retrieveEntity('ContractsReadModels', String(clubId), String(year), function(error, result, response){
+                tableService.retrieveEntity(tableName, String(clubId), String(year), function(error, result, response){
                     if (error && response.statusCode === 404){
-                        tableService.insertEntity('ContractsReadModels', entity, function(error, insertResult, response) {
+                        tableService.insertEntity(tableName, entity, function(error, insertResult, response) {
                             if (error) {
                                 reject(error);
                             }
@@ -66,7 +68,7 @@
                     context.log(`Found existing entry ${JSON.stringify(contracts)}`);
                     contracts.push(contract);
                     result.Contracts['_'] = JSON.stringify(contracts);
-                    tableService.replaceEntity('ContractsReadModels', result, {checkEtag: true}, function(error, updateResult, response){
+                    tableService.replaceEntity(tableName, result, {checkEtag: true}, function(error, updateResult, response){
                         if (error){
                             reject(error);
                         }
@@ -82,7 +84,8 @@
         var versionWriter = (clubId, version) => {
             return new Promise((accept, reject) => {
                 let tableService = azure.createTableService(connectionString);
-                tableService.createTableIfNotExists('ContractsReadVersion', function(error, result, response) {
+                let tableName = 'ContractsReadVersion';
+                tableService.createTableIfNotExists(tableName, function(error, result, response) {
                     if (error) {
                         reject(error);
                         return;
@@ -93,7 +96,7 @@
                         RowKey: entGen.String(String(version))
                     };
 
-                    tableService.insertEntity('ContractsReadVersion', versionRow, function(error, result, response) {
+                    tableService.insertEntity(tableName, versionRow, function(error, result, response) {
                         if (error) {
                             reject(error);
                             return;

@@ -15,43 +15,62 @@
         
         process(currentVersion, newEvent){
             return new Promise((accept, reject) => {
+                var log = this.log;
                 try{
                     var clubId = newEvent.PartitionKey['_'];
                     var version = keyConverter.parseVersion(newEvent.RowKey['_']);
+                    let faulted = false;
                     var eventsToProcess = this.eventFetcher(clubId, currentVersion, version)
                         .then((events) => {
-                            var currentPromise = new Promise((accept, reject) => {accept()});
+                            log(`Found ${events.length} events`);
+                            var currentPromise = new Promise((accept1, reject1) => {accept1()});
                             events.forEach((event) => {
+
+                                if (faulted){
+                                    reject('faulted');
+                                }
+
                                 var payload = JSON.parse(event.Payload['_']);
-                                this.log(`EVENT ${JSON.stringify(payload)}`);
                                 var fromYear = keyConverter.parseRound(payload.FromRound).year;
                                 var toYear = keyConverter.parseRound(payload.ToRound).year;
 
                                 for (var i=fromYear;i<=toYear;i++){
-                                    this.log(`Writing Year ${i} FY ${fromYear} TY ${toYear} E ${JSON.stringify(payload)}`);
                                     let closedYear = i;
                                     currentPromise = currentPromise.then(() => {
+                                        if (faulted){return new Promise((accept1, reject1) => {reject1('faulted');})}
+                                        log(`Writing Year ${closedYear} FY ${fromYear} TY ${toYear} E ${JSON.stringify(payload)}`);
                                         return this.writer(clubId, closedYear, payload);
                                     }).catch((err) => {
                                         reject(err);
+                                        faulted = true;
                                         return;
                                     });
+                                    if (faulted){
+                                        break;
+                                    }
                                 }
                             });
 
+                            if (faulted){
+                                log(`Fault detected, not writing.`);
+                                reject();
+                                return;
+                            }
                             currentPromise.then(() => {
                                 this.versionWriter(clubId, version).then(
                                     () => {accept();}
                                 );
+                            }).catch((err) => {
+                                reject(err);
                             });
                         }).catch((err) => {
-                            this.log(`Failed to fetch events ${err} ${err.stack}`);
+                            log(`Failed to fetch events ${err} ${err.stack}`);
                             reject(`Failed to fetch events ${err}`);
                         });
                 } catch(err){
-                    this.log(`Failed to process event due to ${err}`);
-                    this.log(err.stack);
-                    this.log(JSON.stringify(newEvent));
+                    log(`Failed to process event due to ${err}`);
+                    log(err.stack);
+                    log(JSON.stringify(newEvent));
                     reject(err);
                 }
                 

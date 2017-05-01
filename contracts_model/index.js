@@ -55,9 +55,15 @@
 
         // This needs to be based on the last known version not 0
         try{
-            handler.process(0, event)
-            .then(()=>{
-                context.done(null);
+            let clubId = event.PartitionKey['_'];
+            versionStorage.retrieveEntity(clubId, 'ContractsReadModels')
+            .then((versionEntity) => {
+                let version = 0;
+                if (versionEntity){
+                    context.log(`Found existing version for ${clubId} ${versionEntity.Version['_']}`);
+                    version = versionEntity.Version['_'];
+                }
+                return handler.process(version, event);
             }).catch((err)=>{
                 context.log(`Process faulted ${JSON.stringify(err)}`);
                 context.done(err);

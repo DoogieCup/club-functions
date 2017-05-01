@@ -57,7 +57,7 @@
                                 return;
                             }
                             currentPromise.then(() => {
-                                this.versionWriter(clubId, version).then(
+                                this.versionWriter(clubId, keyConverter.parseVersion(events[events.length-1].RowKey['_'])).then(
                                     () => {accept();}
                                 );
                             }).catch((err) => {

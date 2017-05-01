@@ -29,8 +29,9 @@
 
                                 for (var i=fromYear;i<=toYear;i++){
                                     this.log(`Writing Year ${i} FY ${fromYear} TY ${toYear} E ${JSON.stringify(payload)}`);
+                                    let closedYear = i;
                                     currentPromise = currentPromise.then(() => {
-                                        return this.writer(clubId, i, payload);
+                                        return this.writer(clubId, closedYear, payload);
                                     }).catch((err) => {
                                         reject(err);
                                         return;

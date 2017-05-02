@@ -19,16 +19,11 @@
                 try{
                     var clubId = newEvent.PartitionKey['_'];
                     var version = keyConverter.parseVersion(newEvent.RowKey['_']);
-                    let faulted = false;
                     var eventsToProcess = this.eventFetcher(clubId, currentVersion, version)
                         .then((events) => {
                             log(`Found ${events.length} events`);
                             var currentPromise = new Promise((accept1, reject1) => {accept1()});
                             events.forEach((event) => {
-
-                                if (faulted){
-                                    reject('faulted');
-                                }
 
                                 var payload = JSON.parse(event.Payload['_']);
                                 var fromYear = keyConverter.parseRound(payload.FromRound).year;
@@ -37,25 +32,15 @@
                                 for (var i=fromYear;i<=toYear;i++){
                                     let closedYear = i;
                                     currentPromise = currentPromise.then(() => {
-                                        if (faulted){return new Promise((accept1, reject1) => {reject1('faulted');})}
                                         log(`Writing Year ${closedYear} FY ${fromYear} TY ${toYear} E ${JSON.stringify(payload)}`);
                                         return this.writer(clubId, closedYear, payload);
                                     }).catch((err) => {
                                         reject(err);
-                                        faulted = true;
                                         return;
                                     });
-                                    if (faulted){
-                                        break;
-                                    }
                                 }
                             });
 
-                            if (faulted){
-                                log(`Fault detected, not writing.`);
-                                reject();
-                                return;
-                            }
                             currentPromise.then(() => {
                                 this.versionWriter(clubId, keyConverter.parseVersion(events[events.length-1].RowKey['_'])).then(
                                     () => {accept();}

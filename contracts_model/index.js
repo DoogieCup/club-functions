@@ -53,7 +53,6 @@
             writer,
             versionWriter);
 
-        // This needs to be based on the last known version not 0
         try{
             let clubId = event.PartitionKey['_'];
             versionStorage.retrieveEntity(clubId, 'ContractsReadModels')

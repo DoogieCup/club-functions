@@ -12,7 +12,7 @@
 
         var finalVersion = ('0000000000' + String(version)).slice(-10);
 
-        newEvent.payload = {_: JSON.stringify(event)};
+        newEvent.Payload = {_: JSON.stringify(event)};
         newEvent.PartitionKey = {_: entityId};
         newEvent.eventType = {_: name};
         newEvent.RowKey = {_: finalVersion};

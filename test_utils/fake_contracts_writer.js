@@ -13,7 +13,11 @@
                 this.log(`Writing ${clubId} ${year} ${JSON.stringify(contract)}`);
                 return new Promise((accept, reject) => {
                     try{
-                        this.events[clubId + '|' + String(year)] = contract;
+                        if (!this.events[clubId + '|' + String(year)]){
+                            this.events[clubId + '|' + String(year)] = [];
+                        }
+
+                        this.events[clubId + '|' + String(year)].push(contract);
                         accept();
                     } catch(err) {
                         reject(err);

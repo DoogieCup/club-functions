@@ -4,11 +4,11 @@
     var sinon = require('sinon');
     var Handler = require('../contracts_model/handler.js');
     var log = (msg) => {console.log(msg)};
-    var createEvents = require('./eventBuilder.js')(log);
-    var Writer = require('./fake_contracts_store');
+    var createEvents = require('../test_utils/eventBuilder.js')(log);
+    var Writer = require('../test_utils/fake_contracts_store');
     var Promise = require('promise');
-    var Fetcher = require('./fake_event_store');
-    var Versions = require('./fake_version_writer.js');
+    var Fetcher = require('../test_utils/fake_event_store');
+    var Versions = require('../test_utils/fake_version_writer.js');
 
     tape('Constructor does not throw', (t) => {
         t.doesNotThrow(() => new Handler());

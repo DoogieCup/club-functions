@@ -133,10 +133,25 @@
                 try{
                     var queryObject = new azure.TableQuery()
                         .where(query);
-                    that.tableService.queryEntities(that.tableName, queryObject, null, function(err, result){
-                        if (err){reject(err);}
-                        accept(result.entries);
-                    });
+
+                    var results = [];
+                    var recurse = (cont) => {
+                        that.tableService.queryEntities(that.tableName, queryObject, cont, function(err, result){
+                            if (err){reject(err);}
+
+                            results.entries.forEach((entry) => {
+                                results.push(entry);
+                            });
+
+                            if (!result.continuationToken){
+                                accept(results);
+                            }
+                            
+                            recurse(result.continuationToken);
+                        });
+                    };
+
+                    recurse(null);
                 } catch(err){
                     reject(err);
                 }

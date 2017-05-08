@@ -5,7 +5,7 @@
     var Handler = require('../contracts_model/handler.js');
     var log = (msg) => {console.log(msg)};
     var createEvents = require('../test_utils/eventBuilder.js')(log);
-    var Writer = require('../test_utils/fake_contracts_writer');
+    var Writer = require('../test_utils/fake_writer');
     var Promise = require('promise');
     var Fetcher = require('../test_utils/fake_event_store');
     var Versions = require('../test_utils/fake_version_writer.js');
@@ -53,6 +53,12 @@
 
     tape('Multiple contracts add together', (t) => {
         var events = createEvents('Team1', [
+            {
+                name:'clubCreated', event:{
+                    ClubName:"Testalicious",
+                    CoachName:"Totally Testing",
+                    Email:"Nope@example.com"
+            }},
             {name:'ContractImported', event:{
                 PlayerId: 'Player1',
                 FromRound: 201501,
@@ -79,7 +85,7 @@
                 console.log(`Events ${JSON.stringify(writer.events)}`);
                 t.equal(Object.keys(writer.events).length, 1);
                 t.equal(writer.events['Team1|2015'].length, 2);
-                t.equal(versionWriter.get('Team1'), 2);
+                t.equal(versionWriter.get('Team1'), 3);
                 t.end();
             }).catch((err) => {
                 console.log(`Error ${err} ${err.stack}`);

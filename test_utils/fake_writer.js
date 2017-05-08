@@ -9,15 +9,15 @@
         };
 
         writer(){
-            return (clubId, year, contract) => {
-                this.log(`Writing ${clubId} ${year} ${JSON.stringify(contract)}`);
+            return (partitionKey, rowKey, entity) => {
+                this.log(`Writing ${partitionKey} ${rowKey} ${JSON.stringify(entity)}`);
                 return new Promise((accept, reject) => {
                     try{
-                        if (!this.events[clubId + '|' + String(year)]){
-                            this.events[clubId + '|' + String(year)] = [];
+                        if (!this.events[partitionKey + '|' + String(rowKey)]){
+                            this.events[partitionKey + '|' + String(rowKey)] = [];
                         }
 
-                        this.events[clubId + '|' + String(year)].push(contract);
+                        this.events[partitionKey + '|' + String(rowKey)].push(entity);
                         accept();
                     } catch(err) {
                         reject(err);

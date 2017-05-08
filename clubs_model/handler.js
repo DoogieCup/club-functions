@@ -1,7 +1,8 @@
-'use strict';
 (function(){
-    var Promise = require('promise');
-    var keyConverter = require('../utils/keyConverter.js');
+    let Promise = require('promise');
+    let keyConverter = require('../utils/keyConverter.js');
+    let azure = require('azure-storage');
+    let entGen = azure.TableUtilities.entityGenerator;
     module.exports = class{
         constructor(log,
             eventFetcher,
@@ -11,37 +12,30 @@
                 this.writer = writer;
                 this.eventFetcher = eventFetcher;
                 this.versionWriter = versionWriter;
-            };
-        
+            }
+
         process(currentVersion, newEvent){
+            let log = this.log;
             return new Promise((accept, reject) => {
-                var log = this.log;
                 try{
                     var clubId = newEvent.PartitionKey['_'];
                     var version = keyConverter.parseVersion(newEvent.RowKey['_']);
-                    var eventsToProcess = this.eventFetcher(clubId, currentVersion, version)
-                        .then((events) => {
+                    var eventsToProcess = this.eventFetcher(clubId, currentVersion, version).then((events) => {
                             log(`Found ${events.length} events`);
                             var currentPromise = new Promise((accept1, reject1) => {accept1()});
                             events.forEach((event) => {
-                                if (event.eventType['_'] !== "ContractImported"){
+                                if (event.EventType['_'] !== "clubCreated"){
                                     return;
                                 }
 
                                 var payload = JSON.parse(event.Payload['_']);
-                                var fromYear = keyConverter.parseRound(payload.FromRound).year;
-                                var toYear = keyConverter.parseRound(payload.ToRound).year;
 
-                                for (var i=fromYear;i<=toYear;i++){
-                                    let closedYear = i;
-                                    currentPromise = currentPromise.then(() => {
-                                        log(`Writing Year ${closedYear} FY ${fromYear} TY ${toYear} E ${JSON.stringify(payload)}`);
-                                        return this.writer(clubId, closedYear, payload);
-                                    }).catch((err) => {
-                                        reject(err);
-                                        return;
-                                    });
-                                }
+                                currentPromise.then(() => {
+                                    currentPromise = this.writer({
+                                        PartitionKey: entGen.String(payload.ClubName), 
+                                        RowKey: entGen.String(clubId), 
+                                        Club: entGen.String(JSON.stringify(payload))});
+                                });
                             });
 
                             currentPromise.then(() => {

@@ -1,0 +1,10 @@
+{
+  "disabled": false,
+  "bindings": [
+    {
+      "name": "input",
+      "type": "manualTrigger",
+      "direction": "in"
+    }
+  ]
+}

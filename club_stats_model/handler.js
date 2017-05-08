@@ -106,7 +106,7 @@
                             };
 
                             this.log(`Writing entity:\n${JSON.stringify(entity)}`);
-                            this.outputStore.insertEntity(entity).then(() => {
+                            this.outputStore.replaceEntity(entity).then(() => {
                                 accept();
                             }).catch((err) => {
                                 reject(err);

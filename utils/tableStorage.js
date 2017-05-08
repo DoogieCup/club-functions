@@ -129,6 +129,30 @@
             });
         };
 
+        replaceEntity(entity){
+            let tableService = azure.createTableService(this.connectionString);
+            return new Promise((accept, reject) => {
+                var that = this;
+                try{
+                    this.ensureTable().then(() => {
+                        tableService.insertOrReplaceEntity(that.tableName, entity, {checkEtag: true}, function(error, insertResult, response) {
+                            if (error) {
+                                that.log(`Failed to insert entity to table ${that.tableName} ${entity.PartitionKey['_']} ${entity.RowKey['_']} ${JSON.stringify(entity)}\n${error}\n${insertResult}`);
+                                reject(error);
+                                return;
+                            }
+                            that.log(`New entity written to ${that.tableName} ${entity.PartitionKey['_']} ${entity.RowKey['_']} ${JSON.stringify(entity)}`);
+                            accept(entity);
+                        });
+                    }).catch((err) => {
+                        reject(err);
+                    });
+                } catch(err){
+                    reject(err);
+                }
+            });
+        }
+
         queryEntities(query){
             let tableService = azure.createTableService(this.connectionString);
             this.log(`Received query ${query}`);

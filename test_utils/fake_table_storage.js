@@ -18,6 +18,10 @@
                 this.partitions.set(pKey, new Map());
             }
 
+            if (this.partitions.get(pKey).has(rKey)){
+                throw Error('Duplicated insert');
+            }
+
             this.partitions.get(pKey).set(rKey, row);
         }
 
@@ -48,6 +52,23 @@
                     var result = partition.get(rowKey);
                     accept(result);
                 } catch (err){
+                    reject(err);
+                }
+            });
+        }
+
+        replaceEntity(row){
+            return new Promise((accept, reject) => {
+                try{
+                    let pKey = String(row.PartitionKey['_']);
+                    let rKey = String(row.RowKey['_']);
+                    if (!this.partitions.has(pKey)){
+                        this.partitions.set(pKey, new Map());
+                    }
+
+                    var result = this.partitions.get(pKey).set(rKey, row);
+                    accept(result);
+                }  catch(err){
                     reject(err);
                 }
             });

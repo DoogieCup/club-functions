@@ -91,14 +91,29 @@
                 "17":{"f":0,"m":9,"r":9,"t":6}}))
         }]
 
+        let players = [{
+            PartitionKey: entGen.String('0'),
+            RowKey: entGen.String('b2b18cc5-891d-43e6-9db2-cfff0d437da0'),
+            Name: entGen.String("Johnny Test")
+        },{
+            PartitionKey: entGen.String('0'),
+            RowKey: entGen.String('ee95cf51-a8d6-483f-99cf-02c534f6616e'),
+            Name: entGen.String("Sir Testington")
+        }
+        ];
+
         var contractsStore = new FakeStore([contracts]);
         var outputStore = new FakeStore();
         var statsStore = new FakeStore(stats);
+        var playersStore = new FakeStore(players);
 
         statsStore.addQueryResponse("PartitionKey eq '2016' and (RowKey eq '9bedbb07-6255-43e8-9d7c-87dc8300f504' or RowKey eq 'b2b18cc5-891d-43e6-9db2-cfff0d437da0' or RowKey eq 'ee95cf51-a8d6-483f-99cf-02c534f6616e')",
             stats);
 
-        let handler = new Handler(log, outputStore, contractsStore, statsStore);
+        playersStore.addQueryResponse("RowKey eq '9bedbb07-6255-43e8-9d7c-87dc8300f504' or RowKey eq 'b2b18cc5-891d-43e6-9db2-cfff0d437da0' or RowKey eq 'ee95cf51-a8d6-483f-99cf-02c534f6616e'",
+            players);
+
+        let handler = new Handler(log, outputStore, contractsStore, statsStore, playersStore);
         handler.process(input).then(() => {
             outputStore.retrieveEntity(clubId, String(String(year))).then((entity) => {
                 t.true(entity);
@@ -115,6 +130,15 @@
                 t.true(playerId1Stats);
                 t.equal(playerId1Stats.FromRound, 200807);
                 t.equal(playerId1Stats.Stats['9']['f'], 9);
+                console.log(`Player1 ${JSON.stringify(playerId1Stats)}`);
+                t.equal(playerId1Stats.PlayerName, 'Johnny Test');
+
+                var missingPlayerId = '36881b30-59c0-4fd5-bd9b-b76e42148317';
+                var missingPlayerStats = foundContracts.find((element) => {
+                    return element.PlayerId == missingPlayerId
+                });
+
+                t.equal(missingPlayerStats.PlayerName, missingPlayerId);
 
                 t.end();
             }).catch((err) => {

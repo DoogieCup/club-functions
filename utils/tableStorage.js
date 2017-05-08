@@ -51,7 +51,7 @@
                     this.ensureTable().then(() => {
                         tableService.insertEntity(that.tableName, entity, function(error, insertResult, response) {
                             if (error) {
-                                that.log(`Failed to insert entity to table ${that.tableName} ${entity.PartitionKey['_']} ${entity.PartitionKey['_']} ${JSON.stringify(entity)}\n${error}\n${result}`);
+                                that.log(`Failed to insert entity to table ${that.tableName} ${entity.PartitionKey['_']} ${entity.RowKey['_']} ${JSON.stringify(entity)}\n${error}\n${insertResult}`);
                                 reject(error);
                                 return;
                             }

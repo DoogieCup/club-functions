@@ -6,12 +6,18 @@
     let odata = require('../utils/odataQuery.js');
 
     module.exports = class{
-        constructor(log, outputStore, contractsStore, statsStore){
+        constructor(log, 
+            outputStore, 
+            contractsStore, 
+            statsStore,
+            playersStore){
             this.log = log;
             this.outputStore = outputStore;
             this.contractsStore = contractsStore;
             this.statsStore = statsStore;
+            this.playersStore = playersStore;
         };
+
         process(input){
             return new Promise((accept, reject) => {
                 this.contractsStore.retrieveEntity(input.clubId, String(input.year)).then((contract) => {
@@ -19,7 +25,7 @@
 
                     let playerIdBatches = batcher(playerIds, 12);
 
-                    let queries = playerIdBatches.map((batch) => {
+                    let statsQueries = playerIdBatches.map((batch) => {
                         return odata()
                             .equals('PartitionKey', String(input.year))
                             .and((queryClause) => {
@@ -39,40 +45,73 @@
                         .build();
                     });
 
-                    this.log(`Built queries ${JSON.stringify(queries)}`);
-                    let statsMap = new Map();
-
-                    let statsPromises = queries.map((query) => {
-                        return this.statsStore.queryEntities(query);
+                    let playerQueries = playerIdBatches.map((batch) =>{
+                        let q = odata();
+                        let firstDone = false;
+                        batch.forEach((id) => {
+                            if (!firstDone){
+                                q = q.equals('RowKey', id);
+                                firstDone = true;
+                                return;
+                            }
+                            q = q.or((x) => x.equals('RowKey', id));
+                        });
+                        return q.build();
                     });
 
-                    Promise.all(statsPromises).then((results) => {
-                        this.log(`Queries completed. Processing`);
-                        results.filter((item) => item)
-                            .reduce((acc, item) => {
-                                return acc.concat(item)
-                            }, [])
-                            .forEach((item) => {
-                                this.log(`ITEM ${JSON.stringify(item)}`);
-                                statsMap.set(item.RowKey['_'], JSON.parse(item.StatsString['_']));
-                            });
+                    this.log(`Built queries ${JSON.stringify(statsQueries)}`);
+                    let statsMap = new Map();
+                    let playersMap = new Map();
 
-                        let contracts = JSON.parse(contract.Contracts['_'])
-                            .map((c) => {
-                                c.Stats = statsMap.get(c.PlayerId)
-                                return c;
-                            });
-                            
-                        var entity = {
-                            PartitionKey: entGen.String(input.clubId),
-                            RowKey: entGen.String(String(input.year)),
-                            Contracts: entGen.String(JSON.stringify(contracts))
-                        };
+                    let statsPromises = statsQueries.map((query) =>
+                        this.statsStore.queryEntities(query)
+                    );
 
-                        this.log(`Writing entity:\n${JSON.stringify(entity)}`);
-                        this.outputStore.insertEntity(entity).then(() => {
-                            accept();
-                        }).catch((err) => {
+                    let playerPromises = playerQueries.map((query) =>
+                        this.playersStore.queryEntities(query)
+                    );
+
+                    Promise.all(statsPromises).then((stats) => {
+                        Promise.all(playerPromises).then((players) => {
+                            this.log(`Queries completed. Processing`);
+                            stats.filter((item) => item)
+                                .reduce((acc, item) => {
+                                    return acc.concat(item)
+                                }, [])
+                                .forEach((item) => {
+                                    statsMap.set(item.RowKey['_'], JSON.parse(item.StatsString['_']));
+                                });
+
+                            this.log(`PLAYERS ${JSON.stringify(players)}`);
+
+                            players.filter((player) => player)
+                                .reduce((acc, item) => {
+                                    return acc.concat(item)
+                                }, [])
+                                .forEach((item) => {
+                                    playersMap.set(item.RowKey['_'], item.Name['_']);
+                                });
+
+                            let contracts = JSON.parse(contract.Contracts['_'])
+                                .map((c) => {
+                                    c.Stats = statsMap.get(c.PlayerId);
+                                    c.PlayerName = playersMap.get(c.PlayerId) || c.PlayerId;
+                                    return c;
+                                });
+                                
+                            var entity = {
+                                PartitionKey: entGen.String(input.clubId),
+                                RowKey: entGen.String(String(input.year)),
+                                Contracts: entGen.String(JSON.stringify(contracts)),
+                            };
+
+                            this.log(`Writing entity:\n${JSON.stringify(entity)}`);
+                            this.outputStore.insertEntity(entity).then(() => {
+                                accept();
+                            }).catch((err) => {
+                                reject(err);
+                            });
+                        }).catch((err)=>{
                             reject(err);
                         });
                     }).catch((err) => {

@@ -9,10 +9,10 @@
             this.tableName = tableName;
             this.tableCreated = false;
             this.connectionString = connectionString;
-            this.tableService = azure.createTableService(this.connectionString);
         };
 
         ensureTable(){
+            let tableService = azure.createTableService(this.connectionString);
             var that = this;
             that.log(`Ensuring ${this.tableName} table`);
             return new Promise((accept, reject) => {
@@ -23,7 +23,7 @@
                     }
 
                     that.log(`${that.tableName} does not exist, creating`);
-                        that.tableService.createTableIfNotExists(that.tableName, (error, result, response) => {
+                        tableService.createTableIfNotExists(that.tableName, (error, result, response) => {
                         that.log(`Create ${that.tableName} table callback executing`);
                         if (error) {
                             that.log(`ERROR ${error}`);
@@ -44,11 +44,12 @@
         };
 
         insertEntity(entity){
+            let tableService = azure.createTableService(this.connectionString);
             return new Promise((accept, reject) => {
                 var that = this;
                 try{
                     this.ensureTable().then(() => {
-                        that.tableService.insertEntity(that.tableName, entity, function(error, insertResult, response) {
+                        tableService.insertEntity(that.tableName, entity, function(error, insertResult, response) {
                             if (error) {
                                 that.log(`Failed to insert entity to table ${that.tableName} ${entity.PartitionKey['_']} ${entity.PartitionKey['_']} ${JSON.stringify(entity)}\n${error}\n${result}`);
                                 reject(error);
@@ -67,11 +68,12 @@
         };
 
         retrieveEntity(partitionKey, rowKey){
+            let tableService = azure.createTableService(this.connectionString);
             this.log(`Retrieving entity ${partitionKey} ${rowKey}`);
             return new Promise((accept, reject) => {
                 var that = this;
                 try{
-                    that.tableService.retrieveEntity(that.tableName, partitionKey, rowKey, (error, result, response) => {
+                    tableService.retrieveEntity(that.tableName, partitionKey, rowKey, (error, result, response) => {
                         if (error){
                             if (response.statusCode === 404){
                                 accept();
@@ -92,6 +94,7 @@
         };
 
         upsertEntity(partitionKey, rowKey, fnChangeObject){
+            let tableService = azure.createTableService(this.connectionString);
             return new Promise((accept, reject) => {
                 var that = this;
                 try{
@@ -109,7 +112,7 @@
                                 }
 
                                 let updatedEntity = fnChangeObject(originalEntity);
-                                that.tableService.insertOrReplaceEntity (that.tableName, updatedEntity, {checkEtag: true}, function(error, updateResult, response){
+                                tableService.insertOrReplaceEntity (that.tableName, updatedEntity, {checkEtag: true}, function(error, updateResult, response){
                                     if (error){
                                         reject(error);
                                     }
@@ -127,6 +130,7 @@
         };
 
         queryEntities(query){
+            let tableService = azure.createTableService(this.connectionString);
             this.log(`Received query ${query}`);
             return new Promise((accept, reject) => {
                 var that = this;
@@ -136,18 +140,23 @@
 
                     var results = [];
                     var recurse = (cont) => {
-                        that.tableService.queryEntities(that.tableName, queryObject, cont, function(err, result){
-                            if (err){reject(err);}
+                        tableService.queryEntities(that.tableName, queryObject, cont, function(err, result){
+                            try{
+                                if (err){reject(err);}
 
-                            results.entries.forEach((entry) => {
-                                results.push(entry);
-                            });
+                                result.entries.forEach((entry) => {
+                                    results.push(entry);
+                                });
 
-                            if (!result.continuationToken){
-                                accept(results);
+                                if (!result.continuationToken){
+                                    accept(results);
+                                    return;
+                                }
+                                this.log(`Found continuation, recursing.`);
+                                recurse(result.continuationToken);
+                            } catch(err){
+                                reject(err);
                             }
-                            
-                            recurse(result.continuationToken);
                         });
                     };
 

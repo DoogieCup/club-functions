@@ -42,31 +42,39 @@
                     this.log(`Built queries ${JSON.stringify(queries)}`);
                     let statsMap = new Map();
 
-                    let stats = queries.map((query) => {
+                    let statsPromises = queries.map((query) => {
                         return this.statsStore.queryEntities(query);
-                    }).filter((item) => item)
-                    .reduce((acc, item) => {
-                        let nacc = acc || [];
-                        return nacc.concat(item)
-                    })
-                    .forEach((item) => {
-                        statsMap.set(item.RowKey['_'], JSON.parse(item.StatsString['_']));
                     });
 
-                    let contracts = JSON.parse(contract.Contracts['_'] )
-                    .map((c) => {
-                        c.Stats = statsMap.get(c.PlayerId)
-                        return c;
-                    });
-                    
-                    var entity = {
-                        PartitionKey: entGen.String(input.clubId),
-                        RowKey: entGen.String(String(input.year)),
-                        Contracts: entGen.String(JSON.stringify(contracts))
-                    };
+                    Promise.all(statsPromises).then((results) => {
+                        this.log(`Queries completed. Processing`);
+                        results.filter((item) => item)
+                            .reduce((acc, item) => {
+                                return acc.concat(item)
+                            }, [])
+                            .forEach((item) => {
+                                this.log(`ITEM ${JSON.stringify(item)}`);
+                                statsMap.set(item.RowKey['_'], JSON.parse(item.StatsString['_']));
+                            });
 
-                    this.outputStore.insertEntity(entity).then(() => {
-                        accept();
+                        let contracts = JSON.parse(contract.Contracts['_'])
+                            .map((c) => {
+                                c.Stats = statsMap.get(c.PlayerId)
+                                return c;
+                            });
+                            
+                        var entity = {
+                            PartitionKey: entGen.String(input.clubId),
+                            RowKey: entGen.String(String(input.year)),
+                            Contracts: entGen.String(JSON.stringify(contracts))
+                        };
+
+                        this.log(`Writing entity:\n${JSON.stringify(entity)}`);
+                        this.outputStore.insertEntity(entity).then(() => {
+                            accept();
+                        }).catch((err) => {
+                            reject(err);
+                        });
                     }).catch((err) => {
                         reject(err);
                     });

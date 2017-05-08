@@ -3,18 +3,18 @@
 
     let basicStrategy = function(input){
         let myInput = input || '';
-
-        return {
-            _operator: function(operator, key, value){
+        let _operator = function(operator, key, value){
                 if (typeof(value) == 'string'){
                     value = `'${value}'`;
                 }
 
                 let result = `${myInput} ${key} ${operator} ${value}`.trim();
                 return joiningStrategy(result);
-            },
+            }
+
+        return {
             equals: function(key, value){
-                return this._operator('eq', key, value);
+                return _operator('eq', key, value);
             },
             build: function(){
                 return myInput.trim();
@@ -25,9 +25,7 @@
     let joiningStrategy = function(input){
 
         let myInput = input || '';
-
-        return {
-            _joiner: function(joiner, fn){
+        let _joiner = function(joiner, fn){
                 if (!fn){
                     throw Error(`Cannot join without a fuction`);
                 }
@@ -36,12 +34,14 @@
 
                 let result =  `${myInput} ${joiner} ${subClause}`.trim();
                 return basicStrategy(result);
-            },
+            }
+
+        return {
             and: function(fn){
-                return this._joiner('and', fn);
+                return _joiner('and', fn);
             },
             or: function(fn){
-                return this._joiner('or', fn);
+                return _joiner('or', fn);
             },
             build: function(){
                 return myInput.trim();

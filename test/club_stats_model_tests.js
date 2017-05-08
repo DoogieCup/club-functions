@@ -95,6 +95,9 @@
         var outputStore = new FakeStore();
         var statsStore = new FakeStore(stats);
 
+        statsStore.addQueryResponse("PartitionKey eq '2016' and (RowKey eq '9bedbb07-6255-43e8-9d7c-87dc8300f504' or RowKey eq 'b2b18cc5-891d-43e6-9db2-cfff0d437da0' or RowKey eq 'ee95cf51-a8d6-483f-99cf-02c534f6616e')",
+            stats);
+
         let handler = new Handler(log, outputStore, contractsStore, statsStore);
         handler.process(input).then(() => {
             outputStore.retrieveEntity(clubId, String(String(year))).then((entity) => {
@@ -111,7 +114,7 @@
 
                 t.true(playerId1Stats);
                 t.equal(playerId1Stats.FromRound, 200807);
-                // t.equal(playerId1Stats.Stats['9']['f'], 9);
+                t.equal(playerId1Stats.Stats['9']['f'], 9);
 
                 t.end();
             }).catch((err) => {

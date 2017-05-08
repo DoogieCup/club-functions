@@ -3,6 +3,7 @@
     module.exports = class{
         constructor(rows){
             this.partitions = new Map();
+            this.queries = new Map();
             if (rows){
                 rows.forEach((row) => {
                     this.insertRow(row);
@@ -50,6 +51,14 @@
                     reject(err);
                 }
             });
+        }
+
+        addQueryResponse(query, results){
+            this.queries.set(query, results);
+        }
+
+        queryEntities(query){
+            return this.queries.get(query);
         }
     };
 })();

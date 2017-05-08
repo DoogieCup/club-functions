@@ -38,18 +38,35 @@
         t.end();
     });
 
-    tape('Two ands fails', (t) => {
-        var q = query().equals('pk1', 1)
-        .and((t) => {return t;});
-        t.throws(() => q.and((t) => {return t}));
-        t.end();
-    });
-
     tape('or', (t) => {
         var output = query().equals('pk1', 1)
         .or((q) => q.equals('pk2', 2))
         .build();
         t.equals(output, "pk1 eq 1 or pk2 eq 2");
+        t.end();
+    });
+
+    tape('clause', (t) => {
+        var output = query().equals('pk1', 1)
+        .and((q) => q.equals('pk2', 2).and((x) => x.equals('pk3', 3)))
+        .build();
+        t.equals(output, "pk1 eq 1 and (pk2 eq 2 and pk3 eq 3)");
+        t.end();
+    });
+
+    tape('clause2', (t) => {
+        var output = query().equals('pk1', 1)
+        .and((q) => q.equals('pk2', 2).and((x) => x.equals('pk3', 3)).and((x) => x.equals('pk4', 4)))
+        .build();
+        t.equals(output, "pk1 eq 1 and (pk2 eq 2 and pk3 eq 3 and pk4 eq 4)");
+        t.end();
+    });
+
+    tape('clause3', (t) => {
+        var output = query().equals('pk1', 1)
+        .and((q) => q.equals('pk2', 2).and((x) => x.equals('pk3', 3))).and((x) => x.equals('pk4', 4))
+        .build();
+        t.equals(output, "pk1 eq 1 and (pk2 eq 2 and pk3 eq 3) and pk4 eq 4");
         t.end();
     });
 })();

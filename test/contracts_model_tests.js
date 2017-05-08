@@ -5,7 +5,7 @@
     var Handler = require('../contracts_model/handler.js');
     var log = (msg) => {console.log(msg)};
     var createEvents = require('../test_utils/eventBuilder.js')(log);
-    var Writer = require('../test_utils/fake_contracts_store');
+    var Writer = require('../test_utils/fake_contracts_writer');
     var Promise = require('promise');
     var Fetcher = require('../test_utils/fake_event_store');
     var Versions = require('../test_utils/fake_version_writer.js');

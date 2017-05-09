@@ -20,24 +20,9 @@
         let eventFetcher = new EventFetcher(context.log, eventStorage);
         let versionWriter = new VersionWriter(context.log, versionStorage, 'ContractsReadModels');
 
-        var writer = (clubId, year, contract) => {
-            context.log(`Asked to write ${clubId} ${year} ${JSON.stringify(contract)}`);
-            var updater = (entity) => {
-                if (!entity.Contracts){
-                        entity.Contracts = entGen.String(JSON.stringify([]));
-                }
-                var contracts = JSON.parse(entity.Contracts['_']);
-                contracts.push(contract);
-                entity.Contracts = entGen.String(JSON.stringify(contracts));
-                return entity;
-            };
-
-            return contractStorage.upsertEntity(String(clubId), String(year), updater);
-        };
-
         var handler = new Handler(context.log,
             eventFetcher,
-            writer,
+            contractStorage,
             versionWriter);
 
         try{

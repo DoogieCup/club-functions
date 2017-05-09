@@ -14,7 +14,7 @@
         let outputStorage = new TableStorage(context.log, 'ClubsRead', connectionString);
         let eventStorage = new TableStorage(context.log, 'clubEvents', connectionString);
         let versionStorage = new TableStorage(context.log, 'ClubsReadVersion', connectionString);
-        let versionWriter = new VersionWriter(context.log, versionStorage, 'ClubsReadModels');
+        let versionWriter = new VersionWriter(context.log, versionStorage, 'ClubsRead');
                 
         let handler = new Handler(context.log,
             new EventFetcher(context.log, eventStorage),
@@ -22,9 +22,9 @@
             versionWriter);
 
         try{
-            versionStorage.retrieveEntity(input.PartitionKey['_'], 'ClubsReadModels')
+            versionStorage.retrieveEntity(input.PartitionKey['_'], 'ClubsRead')
             .then((versionEntity) => {
-                let version = 0;
+                let version = -1;
                 if (versionEntity){
                     context.log(`Found existing version for ${clubId} ${versionEntity.Version['_']}`);
                     version = versionEntity.Version['_'];

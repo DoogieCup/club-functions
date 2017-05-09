@@ -22,12 +22,14 @@
                 log(`Found ${events.length} events`);
                 let currentPromise = new Promise((accept, reject) => {accept()});
                 events.forEach((event) => {
-                    log(`EVENT ${event} ${JSON.stringify(event)}`);
+                    
                     if (event.eventType['_'] !== "clubCreated"){
+                        log(`IGNORING EVENT ${event.eventType['_']} clubCreated`);
                         return;
                     }
+                    log(`PROCESSING EVENT ${JSON.stringify(event)}`);
 
-                    let payload = JSON.parse(event.Payload['_']);
+                    let payload = JSON.parse(event.payload['_']);
                     currentPromise.then(() => {
                         currentPromise = this.writer.replaceEntity({
                             PartitionKey: entGen.String(payload.ClubName),

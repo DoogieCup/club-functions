@@ -68,7 +68,9 @@
                         this.partitions.set(pKey, new Map());
                     }
 
+                    console.log(`INSERTING ${pKey} ${rKey} ${JSON.stringify(row)}`);
                     var result = this.partitions.get(pKey).set(rKey, row);
+                    console.log(`INSERTED ${JSON.stringify(this.partitions.get(pKey).get(rKey))}`);
                     accept(result);
                 }  catch(err){
                     reject(err);
@@ -78,7 +80,7 @@
 
         upsertEntity(partitionKey, rowKey, fnChangeObject){
             console.log(`Upserting entity ${partitionKey} ${rowKey}`);
-            return this.retrieveEntity(partitionKey, rowKey)
+            return this.retrieveEntity(String(partitionKey), String(rowKey))
                 .then((originalEntity) => {
                     if (!originalEntity){
                         originalEntity = {
@@ -101,7 +103,7 @@
             return new Promise((accept, reject) => {
                 try{
                     if (!this.queries.has(query)){
-                        console.log(`Couldnlt locate query ${query}`);
+                        console.log(`Couldn't locate query ${query}`);
                     }
 
                     accept(this.queries.get(query));

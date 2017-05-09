@@ -1,14 +1,12 @@
 'use strict';
 (function(){
     var tape = require('tape');
-    var sinon = require('sinon');
     var Handler = require('../contracts_model/handler.js');
-    var log = (msg) => {console.log(msg)};
-    var createEvents = require('../test_utils/eventBuilder.js')(log);
-    var Writer = require('../test_utils/fake_writer');
+    var createEvents = require('../test_utils/eventBuilder.js')(console.log);
     var Promise = require('promise');
-    var Fetcher = require('../test_utils/fake_event_store');
-    var Versions = require('../test_utils/fake_version_writer.js');
+    var Fetcher = require('../utils/event_fetcher.js');
+    var VersionWriter = require('../utils/version_writer.js');
+    var TableStorage = require('../test_utils/fake_table_storage.js');
 
     tape('Constructor does not throw', (t) => {
         t.doesNotThrow(() => new Handler());
@@ -33,22 +31,32 @@
             }}
         ]);
 
-        var writer = new Writer(log);
-        var fetcher = new Fetcher(events);
-        var versionWriter = new Versions();
+        var output = new TableStorage();
+        var eventStorage = new TableStorage(events);
+        eventStorage.addQueryResponse(`PartitionKey eq 'Team1' and RowKey gt '0000000000' and RowKey le '0000000001'`,
+            events);
+        var fetcher = new Fetcher(console.log, eventStorage);
+        var versionStorage = new TableStorage();
+        var versionWriter = new VersionWriter(console.log, versionStorage, 'contracts_tests');
         console.log(`Fetcher created ${JSON.stringify(fetcher.events)}`);
         
-        var handler = new Handler(log, fetcher.fetch(), writer.writer(), versionWriter.writerFunction());
+        var handler = new Handler(console.log, fetcher, output, versionWriter);
         var newEvent = events[events.length-1];
         handler.process(0, newEvent)
             .then(() => {
-                console.log(`Events ${JSON.stringify(writer.events)}`);
-                t.equal(Object.keys(writer.events).length, 1);
-                t.equal(versionWriter.get('Team1'), 1);
-                t.end();
+                return versionStorage.retrieveEntity('Team1', 'contracts_tests').then((entity) => {
+                    t.equal(entity.Version['_'], 1);
+                }).then(() => {
+                    t.equal(output.partitions.size, 1);
+                    return output.retrieveEntity('Team1', '2015').then((entity) => {
+                        console.log(`ENTITY ${JSON.stringify(entity)}`);
+                        t.equal(JSON.parse(entity.Contracts['_']).length, 1);
+                    });
+                });
             }).catch((err) => {
-                console.log(`Error ${err} ${err.stack}`);
+                t.fail(`Error ${err} ${err.stack}`);
             });
+            t.end();
     });
 
     tape('Multiple contracts add together', (t) => {
@@ -73,22 +81,31 @@
             }}
         ]);
 
-        var writer = new Writer(log);
-        var fetcher = new Fetcher(events);
-        var versionWriter = new Versions();
+        var output = new TableStorage();
+        var eventStorage = new TableStorage(events);
+        eventStorage.addQueryResponse(`PartitionKey eq 'Team1' and RowKey gt '0000000000' and RowKey le '0000000003'`,
+            events);
+        var fetcher = new Fetcher(console.log, eventStorage);
+        var versionStorage = new TableStorage();
+        var versionWriter = new VersionWriter(console.log, versionStorage, 'contracts_tests');
         console.log(`Fetcher created ${JSON.stringify(fetcher.events)}`);
         
-        var handler = new Handler(log, fetcher.fetch(), writer.writer(), versionWriter.writerFunction());
+        var handler = new Handler(console.log, fetcher, output, versionWriter);
         var newEvent = events[events.length-1];
         handler.process(0, newEvent)
             .then(() => {
-                console.log(`Events ${JSON.stringify(writer.events)}`);
-                t.equal(Object.keys(writer.events).length, 1);
-                t.equal(writer.events['Team1|2015'].length, 2);
-                t.equal(versionWriter.get('Team1'), 3);
-                t.end();
+                return versionStorage.retrieveEntity('Team1', 'contracts_tests').then((entity) => {
+                    t.equal(entity.Version['_'], 3);
+                }).then(() => {
+                    t.equal(output.partitions.size, 1);
+                    return output.retrieveEntity('Team1', '2015').then((entity) => {
+                        console.log(`ENTITY ${JSON.stringify(entity)}`);
+                        t.equal(JSON.parse(entity.Contracts['_']).length, 2);
+                    });
+                });
             }).catch((err) => {
-                console.log(`Error ${err} ${err.stack}`);
+                t.fail(`Error ${err} ${err.stack}`);
             });
+            t.end();
     });
 })();

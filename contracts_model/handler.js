@@ -2,6 +2,8 @@
 (function(){
     var Promise = require('promise');
     var keyConverter = require('../utils/keyConverter.js');
+    let azure = require('azure-storage');
+    let entGen = azure.TableUtilities.entityGenerator;
     module.exports = class{
         constructor(log,
             eventFetcher,
@@ -14,55 +16,46 @@
             };
         
         process(currentVersion, newEvent){
-            return new Promise((accept, reject) => {
-                var log = this.log;
-                try{
-                    var clubId = newEvent.PartitionKey['_'];
-                    var version = keyConverter.parseVersion(newEvent.RowKey['_']);
-                    var eventsToProcess = this.eventFetcher(clubId, currentVersion, version)
-                        .then((events) => {
-                            log(`Found ${events.length} events`);
-                            var currentPromise = new Promise((accept1, reject1) => {accept1()});
-                            events.forEach((event) => {
-                                if (event.eventType['_'] !== "ContractImported"){
-                                    return;
-                                }
+            var log = this.log;
+            var clubId = newEvent.PartitionKey['_'];
+            var version = keyConverter.parseVersion(newEvent.RowKey['_']);
+            return this.eventFetcher.fetch(clubId, currentVersion, version)
+                .then((events) => {
+                    log(`Found ${JSON.stringify(events)} events`);
+                    log(`Found ${events.length} events`);
+                    var currentPromise = new Promise((accept1, reject1) => {accept1()});
+                    events.forEach((event) => {
+                        if (event.eventType['_'] !== "ContractImported"){
+                            return;
+                        }
 
-                                var payload = JSON.parse(event.Payload['_']);
-                                var fromYear = keyConverter.parseRound(payload.FromRound).year;
-                                var toYear = keyConverter.parseRound(payload.ToRound).year;
+                        var payload = JSON.parse(event.payload['_']);
+                        var fromYear = keyConverter.parseRound(payload.FromRound).year;
+                        var toYear = keyConverter.parseRound(payload.ToRound).year;
 
-                                for (var i=fromYear;i<=toYear;i++){
-                                    let closedYear = i;
-                                    currentPromise = currentPromise.then(() => {
-                                        log(`Writing Year ${closedYear} FY ${fromYear} TY ${toYear} E ${JSON.stringify(payload)}`);
-                                        return this.writer(clubId, closedYear, payload);
-                                    }).catch((err) => {
-                                        reject(err);
-                                        return;
+                        for (var i=fromYear;i<=toYear;i++){
+                            let closedYear = i;
+                            currentPromise = currentPromise.then(() => {
+                                log(`Writing Year ${closedYear} FY ${fromYear} TY ${toYear} E ${JSON.stringify(payload)}`);
+
+                                return this.writer.upsertEntity(clubId,
+                                    closedYear,
+                                    (entity) => {
+                                        console.log(`INITIAL ${JSON.stringify(entity)}`);
+                                        let array = entity.Contracts ? JSON.parse(entity.Contracts['_']) : [];
+                                        array.push(payload);
+                                        entity.Contracts = entGen.String(JSON.stringify(array));
+                                        console.log(`FINAL ${JSON.stringify(entity)}`);
+                                        return entity;
                                     });
-                                }
                             });
+                        }
+                    });
 
-                            currentPromise.then(() => {
-                                this.versionWriter(clubId, keyConverter.parseVersion(events[events.length-1].RowKey['_'])).then(
-                                    () => {accept();}
-                                );
-                            }).catch((err) => {
-                                reject(err);
-                            });
-                        }).catch((err) => {
-                            log(`Failed to fetch events ${err} ${err.stack}`);
-                            reject(`Failed to fetch events ${err}`);
-                        });
-                } catch(err){
-                    log(`Failed to process event due to ${err}`);
-                    log(err.stack);
-                    log(JSON.stringify(newEvent));
-                    reject(err);
-                }
-                
-            });
+                    return currentPromise.then(() => {
+                        return this.versionWriter.write(clubId, keyConverter.parseVersion(events[events.length-1].RowKey['_']));
+                    });
+                });
         };
     };
 })();

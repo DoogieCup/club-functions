@@ -3,10 +3,8 @@
     let tape = require('tape');
     let Handler = require('../clubs_model/handler.js') ;
     let createEvents = require('../test_utils/eventBuilder.js')(console.log);
-    let Writer = require('../test_utils/fake_writer');
     let Promise = require('promise');
     let EventFetcher = require('../utils/event_fetcher.js');
-    let Versions = require('../test_utils/fake_version_writer.js');
     let TableStorage = require('../test_utils/fake_table_storage.js');
     let VersionWriter = require('../utils/version_writer.js');
 

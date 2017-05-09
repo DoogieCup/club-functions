@@ -8,6 +8,8 @@
     let entGen = azure.TableUtilities.entityGenerator;
     var readTableCreated = false;
     var TableStorage = require('../utils/tableStorage.js');
+    let EventFetcher = require('../utils/event_fetcher.js');
+    let VersionWriter = require('../utils/version_writer.js');
 
     module.exports = function(context, event) {
         var log = (msg) => {context.log(msg);}
@@ -15,13 +17,8 @@
         let eventStorage = new TableStorage(log, 'clubEvents', connectionString);
         let contractStorage = new TableStorage(log, 'ContractsReadModels', connectionString);
         let versionStorage = new TableStorage(log, 'ContractsReadVersion', connectionString);
-
-        var eventFetcher = (id, knownVersion, newVersion) => {
-            context.log(`Executing event fetcher Id ${id} Known Version ${knownVersion} new version ${newVersion}`);
-            
-            var q = `PartitionKey eq '${String(id)}' and RowKey gt '${keyConverter.toVersionKey(knownVersion)}' and RowKey le '${keyConverter.toVersionKey(newVersion)}'`;
-            return eventStorage.queryEntities(q);
-        };
+        let eventFetcher = new EventFetcher(context.log, eventStorage);
+        let versionWriter = new VersionWriter(context.log, versionStorage, 'ContractsReadModels');
 
         var writer = (clubId, year, contract) => {
             context.log(`Asked to write ${clubId} ${year} ${JSON.stringify(contract)}`);
@@ -38,16 +35,6 @@
             return contractStorage.upsertEntity(String(clubId), String(year), updater);
         };
 
-        var versionWriter = (clubId, version) => {
-            context.log(`Writing version ${clubId} ${version}`);
-            let upsert = (entity) => {
-                context.log(`Updating version to ${version} for ${clubId}`);
-                entity.Version = entGen.Int32(version);
-                return entity;
-            };
-            return versionStorage.upsertEntity(clubId, 'ContractsReadModels', upsert);
-        };
-
         var handler = new Handler(context.log,
             eventFetcher,
             writer,
@@ -57,7 +44,7 @@
             let clubId = event.PartitionKey['_'];
             versionStorage.retrieveEntity(clubId, 'ContractsReadModels')
             .then((versionEntity) => {
-                let version = 0;
+                let version = -1;
                 if (versionEntity){
                     context.log(`Found existing version for ${clubId} ${versionEntity.Version['_']}`);
                     version = versionEntity.Version['_'];

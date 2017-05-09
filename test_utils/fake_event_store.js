@@ -4,6 +4,7 @@
     var Promise = require('promise');
     module.exports = class{
         constructor(events){
+            console.log(`DEPRECATED use event_fetcher with a taboe_storage`);
             this.events = {};
             var version = 1;
             events.forEach((event) => {

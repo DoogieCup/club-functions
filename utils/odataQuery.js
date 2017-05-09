@@ -24,6 +24,15 @@
                 equals: function(key, value){
                     return _operator('eq', key, value);
                 },
+                gt: function(key, value){
+                    return _operator('gt', key, value);
+                },
+                lt: function(key, value){
+                    return _operator('lt', key, value);
+                },
+                le: function(key, value){
+                    return _operator('le', key, value);
+                },
                 build: function(){
                     return build(myInput);
                 }

@@ -3,35 +3,21 @@
     let Handler = require('./handler.js');
     let TableStorage = require('../utils/tableStorage.js');
     let connectionString = process.env.AzureWebJobsDashboard;
-    var keyConverter = require('../utils/keyConverter.js');
-    var Promise = require('promise');
-    var azure = require('azure-storage');
+    let keyConverter = require('../utils/keyConverter.js');
+    let Promise = require('promise');
+    let azure = require('azure-storage');
     let entGen = azure.TableUtilities.entityGenerator;
+    let EventFetcher = require('../utils/event_fetcher.js');
+    let VersionWriter = require('../utils/version_writer.js');
 
     module.exports = function(context, input){
         let outputStorage = new TableStorage(context.log, 'ClubsRead', connectionString);
         let eventStorage = new TableStorage(context.log, 'clubEvents', connectionString);
         let versionStorage = new TableStorage(context.log, 'ClubsReadVersion', connectionString);
-
-        var versionWriter = (clubId, version) => {
-            context.log(`Writing version ${clubId} ${version}`);
-            let upsert = (entity) => {
-                context.log(`Updating version to ${version} for ${clubId}`);
-                entity.Version = entGen.Int32(version);
-                return entity;
-            };
-            return versionStorage.upsertEntity(clubId, 'ClubsReadModels', upsert);
-        };
-
-        var eventFetcher = (id, knownVersion, newVersion) => {
-            context.log(`Executing event fetcher Id ${id} Known Version ${knownVersion} new version ${newVersion}`);
-            
-            var q = `PartitionKey eq '${String(id)}' and RowKey gt '${keyConverter.toVersionKey(knownVersion)}' and RowKey le '${keyConverter.toVersionKey(newVersion)}'`;
-            return eventStorage.queryEntities(q);
-        };
-
+        let versionWriter = new VersionWriter(context.log, versionStorage, 'ClubsReadModels');
+                
         let handler = new Handler(context.log,
-            eventFetcher,
+            new EventFetcher(context.log, eventStorage),
             outputStorage, 
             versionWriter);
 

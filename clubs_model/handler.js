@@ -16,46 +16,29 @@
 
         process(currentVersion, newEvent){
             let log = this.log;
-            return new Promise((accept, reject) => {
-                try{
-                    var clubId = newEvent.PartitionKey['_'];
-                    var version = keyConverter.parseVersion(newEvent.RowKey['_']);
-                    var eventsToProcess = this.eventFetcher(clubId, currentVersion, version).then((events) => {
-                            log(`Found ${events.length} events`);
-                            var currentPromise = new Promise((accept1, reject1) => {accept1()});
-                            events.forEach((event) => {
-                                if (event.EventType['_'] !== "clubCreated"){
-                                    return;
-                                }
+            let clubId = newEvent.PartitionKey['_'];
+            let version = keyConverter.parseVersion(newEvent.RowKey['_']);
+            return this.eventFetcher.fetch(clubId, currentVersion, version).then((events) => {
+                log(`Found ${events.length} events`);
+                let currentPromise = new Promise((accept, reject) => {accept()});
+                events.forEach((event) => {
+                    log(`EVENT ${event} ${JSON.stringify(event)}`);
+                    if (event.eventType['_'] !== "clubCreated"){
+                        return;
+                    }
 
-                                var payload = JSON.parse(event.Payload['_']);
+                    let payload = JSON.parse(event.Payload['_']);
+                    currentPromise.then(() => {
+                        currentPromise = this.writer.replaceEntity({
+                            PartitionKey: entGen.String(payload.ClubName),
+                            RowKey: entGen.String(clubId), 
+                            Club: entGen.String(JSON.stringify(payload))});
+                    });
+                });
 
-                                currentPromise.then(() => {
-                                    currentPromise = this.writer({
-                                        PartitionKey: entGen.String(payload.ClubName), 
-                                        RowKey: entGen.String(clubId), 
-                                        Club: entGen.String(JSON.stringify(payload))});
-                                });
-                            });
-
-                            currentPromise.then(() => {
-                                this.versionWriter(clubId, keyConverter.parseVersion(events[events.length-1].RowKey['_'])).then(
-                                    () => {accept();}
-                                );
-                            }).catch((err) => {
-                                reject(err);
-                            });
-                        }).catch((err) => {
-                            log(`Failed to fetch events ${err} ${err.stack}`);
-                            reject(`Failed to fetch events ${err}`);
-                        });
-                } catch(err){
-                    log(`Failed to process event due to ${err}`);
-                    log(err.stack);
-                    log(JSON.stringify(newEvent));
-                    reject(err);
-                }
-                
+                return currentPromise.then(() => {
+                    return this.versionWriter.write(clubId, keyConverter.parseVersion(events[events.length-1].RowKey['_']));
+                });
             });
         };
     };

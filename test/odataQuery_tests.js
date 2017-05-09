@@ -69,4 +69,28 @@
         t.equals(output, "pk1 eq 1 and (pk2 eq 2 and pk3 eq 3) and pk4 eq 4");
         t.end();
     });
+
+    tape('gt', (t) => {
+        var output = query().equals('pk1', 1)
+        .and((q) => q.equals('pk2', 2).and((x) => x.gt('pk3', 3))).and((x) => x.equals('pk4', 4))
+        .build();
+        t.equals(output, "pk1 eq 1 and (pk2 eq 2 and pk3 gt 3) and pk4 eq 4");
+        t.end();
+    });
+
+    tape('lt', (t) => {
+        var output = query().equals('pk1', 1)
+        .and((q) => q.equals('pk2', 2).and((x) => x.lt('pk3', 3))).and((x) => x.equals('pk4', 4))
+        .build();
+        t.equals(output, "pk1 eq 1 and (pk2 eq 2 and pk3 lt 3) and pk4 eq 4");
+        t.end();
+    });
+
+    tape('le', (t) => {
+        var output = query().equals('pk1', 1)
+        .and((q) => q.equals('pk2', 2).and((x) => x.le('pk3', 3))).and((x) => x.equals('pk4', 4))
+        .build();
+        t.equals(output, "pk1 eq 1 and (pk2 eq 2 and pk3 le 3) and pk4 eq 4");
+        t.end();
+    });
 })();

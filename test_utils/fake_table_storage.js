@@ -1,5 +1,7 @@
 'use strict';
 (function(){
+    let azure = require('azure-storage');
+    let entGen = azure.TableUtilities.entityGenerator;
     module.exports = class{
         constructor(rows){
             this.partitions = new Map();
@@ -74,12 +76,39 @@
             });
         }
 
+        upsertEntity(partitionKey, rowKey, fnChangeObject){
+            console.log(`Upserting entity ${partitionKey} ${rowKey}`);
+            return this.retrieveEntity(partitionKey, rowKey)
+                .then((originalEntity) => {
+                    if (!originalEntity){
+                        originalEntity = {
+                            PartitionKey: entGen.String(partitionKey),
+                            RowKey: entGen.String(rowKey)
+                        };
+                        console.log(`Existing entity not found, creating new entity ${JSON.stringify(originalEntity)}`);
+                    }
+
+                    let updatedEntity = fnChangeObject(originalEntity);
+                    return this.replaceEntity(updatedEntity);
+                });
+        }
+
         addQueryResponse(query, results){
             this.queries.set(query, results);
         }
 
         queryEntities(query){
-            return this.queries.get(query);
+            return new Promise((accept, reject) => {
+                try{
+                    if (!this.queries.has(query)){
+                        console.log(`Couldnlt locate query ${query}`);
+                    }
+
+                    accept(this.queries.get(query));
+                } catch(err){
+                    reject(err);
+                }
+            });
         }
     };
 })();

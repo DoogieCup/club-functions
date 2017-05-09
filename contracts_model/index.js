@@ -29,7 +29,7 @@
             let clubId = event.PartitionKey['_'];
             versionStorage.retrieveEntity(clubId, 'ContractsReadModels')
             .then((versionEntity) => {
-                let version = -1;
+                let version = 0;
                 if (versionEntity){
                     context.log(`Found existing version for ${clubId} ${versionEntity.Version['_']}`);
                     version = versionEntity.Version['_'];

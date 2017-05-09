@@ -24,7 +24,7 @@
         try{
             versionStorage.retrieveEntity(input.PartitionKey['_'], 'ClubsRead')
             .then((versionEntity) => {
-                let version = -1;
+                let version = 0;
                 if (versionEntity){
                     context.log(`Found existing version for ${clubId} ${versionEntity.Version['_']}`);
                     version = versionEntity.Version['_'];

@@ -72,7 +72,7 @@
             return new Promise((accept, reject) => {
                 var that = this;
                 try{
-                    tableService.retrieveEntity(that.tableName, partitionKey, rowKey, (error, result, response) => {
+                    tableService.retrieveEntity(that.tableName, String(partitionKey), String(rowKey), (error, result, response) => {
                         if (error){
                             if (response.statusCode === 404){
                                 accept();

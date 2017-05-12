@@ -101,8 +101,8 @@
                         .then((originalEntity) => {
                             if (!originalEntity){
                                 originalEntity = {
-                                    PartitionKey: entGen.String(partitionKey),
-                                    RowKey: entGen.String(rowKey)
+                                    PartitionKey: entGen.String(String(partitionKey)),
+                                    RowKey: entGen.String(String(rowKey))
                                 };
                                 log(`Existing entity not found, creating new entity ${JSON.stringify(originalEntity)}`);
                             }

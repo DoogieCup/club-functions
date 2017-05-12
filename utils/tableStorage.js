@@ -108,7 +108,7 @@
                             }
 
                             let updatedEntity = fnChangeObject(originalEntity);
-                            return replaceEntity(updatedEntity);
+                            return this.replaceEntity(updatedEntity);
                         });
                 });
         };

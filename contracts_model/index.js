@@ -16,7 +16,7 @@
         context.log(`Processing ${JSON.stringify(event)}`);
         let eventStorage = new TableStorage(log, 'clubEvents', connectionString);
         let contractStorage = new TableStorage(log, 'ContractsReadModels', connectionString);
-        let versionStorage = new TableStorage(log, 'ContractsReadVersion', connectionString);
+        let versionStorage = new TableStorage(log, 'ClubsReadVersion', connectionString);
         let eventFetcher = new EventFetcher(context.log, eventStorage);
         let versionWriter = new VersionWriter(context.log, versionStorage, 'ContractsReadModels');
 

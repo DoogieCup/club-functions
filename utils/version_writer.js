@@ -12,8 +12,9 @@
         };
         write(entityId, version){
             let log = this.log;
+            let modelName = this.modelName;
             let upsert = (entity) => {
-                log(`Updating version to ${version} for ${entityId}`);
+                log(`Updating version of ${modelName} to ${version} for ${entityId}`);
                 entity.Version = entGen.Int32(version);
                 return entity;
             };

@@ -36,7 +36,7 @@
                 }
                 return handler.process(version, event);
             }).catch((err)=>{
-                context.log(`Process faulted ${JSON.stringify(err)}`);
+                context.log(`Process faulted ${err}\n${err.stack}`);
                 context.done(err);
             });
         }

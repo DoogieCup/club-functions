@@ -14,7 +14,6 @@
         ensureTable(){
             let tableService = azure.createTableService(this.connectionString);
             var that = this;
-            that.log(`Ensuring ${this.tableName} table`);
             return new Promise((accept, reject) => {
                 try{
                     if (that.tableCreated){
@@ -95,38 +94,23 @@
 
         upsertEntity(partitionKey, rowKey, fnChangeObject){
             let tableService = azure.createTableService(this.connectionString);
-            return new Promise((accept, reject) => {
-                var that = this;
-                try{
-                    that.log(`Upserting entity ${partitionKey} ${rowKey}`);
-                    this.ensureTable().then(() => {
-                        that.log(`${that.tableName} ensured, fetching entity`);
-                        this.retrieveEntity(partitionKey, rowKey)
-                            .then((originalEntity) => {
-                                if (!originalEntity){
-                                    originalEntity = {
-                                        PartitionKey: entGen.String(partitionKey),
-                                        RowKey: entGen.String(rowKey)
-                                    };
-                                    that.log(`Existing entity not found, creating new entity ${JSON.stringify(originalEntity)}`);
-                                }
+                var log = this.log;
+                log(`Upserting entity ${partitionKey} ${rowKey}`);
+                return this.ensureTable().then(() => {
+                    return this.retrieveEntity(partitionKey, rowKey)
+                        .then((originalEntity) => {
+                            if (!originalEntity){
+                                originalEntity = {
+                                    PartitionKey: entGen.String(partitionKey),
+                                    RowKey: entGen.String(rowKey)
+                                };
+                                log(`Existing entity not found, creating new entity ${JSON.stringify(originalEntity)}`);
+                            }
 
-                                let updatedEntity = fnChangeObject(originalEntity);
-                                tableService.insertOrReplaceEntity (that.tableName, updatedEntity, {checkEtag: true}, function(error, updateResult, response){
-                                    if (error){
-                                        reject(error);
-                                    }
-                                    that.log(`Updated ${that.tableName} ${partitionKey} ${rowKey} ${JSON.stringify(updateResult)}`);
-                                    accept();
-                                });
-                            });
-                    }).catch((err) => {
-                        reject(err);
-                    });
-                } catch(err) {
-                    reject(err);
-                }
-            });
+                            let updatedEntity = fnChangeObject(originalEntity);
+                            return replaceEntity(updatedEntity);
+                        });
+                });
         };
 
         replaceEntity(entity){

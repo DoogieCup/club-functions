@@ -5,7 +5,7 @@
     let log = (msg) => {console.log(msg)};
     var azure = require('azure-storage');
     let entGen = azure.TableUtilities.entityGenerator;
-    let FakeStore = require('../test_utils/fake_table_storage.js');    
+    let FakeStore = require('../test_utils/fake_table_storage.js');
 
     tape("Constructor doesn't throw", (t) => {
         t.doesNotThrow(() => {new Handler(log)});

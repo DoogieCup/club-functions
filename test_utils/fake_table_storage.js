@@ -1,5 +1,7 @@
 'use strict';
 (function(){
+    let azure = require('azure-storage');
+    let entGen = azure.TableUtilities.entityGenerator;
     module.exports = class{
         constructor(rows){
             this.partitions = new Map();
@@ -66,7 +68,9 @@
                         this.partitions.set(pKey, new Map());
                     }
 
+                    console.log(`INSERTING ${pKey} ${rKey} ${JSON.stringify(row)}`);
                     var result = this.partitions.get(pKey).set(rKey, row);
+                    console.log(`INSERTED ${JSON.stringify(this.partitions.get(pKey).get(rKey))}`);
                     accept(result);
                 }  catch(err){
                     reject(err);
@@ -74,12 +78,39 @@
             });
         }
 
+        upsertEntity(partitionKey, rowKey, fnChangeObject){
+            console.log(`Upserting entity ${partitionKey} ${rowKey}`);
+            return this.retrieveEntity(String(partitionKey), String(rowKey))
+                .then((originalEntity) => {
+                    if (!originalEntity){
+                        originalEntity = {
+                            PartitionKey: entGen.String(partitionKey),
+                            RowKey: entGen.String(rowKey)
+                        };
+                        console.log(`Existing entity not found, creating new entity ${JSON.stringify(originalEntity)}`);
+                    }
+
+                    let updatedEntity = fnChangeObject(originalEntity);
+                    return this.replaceEntity(updatedEntity);
+                });
+        }
+
         addQueryResponse(query, results){
             this.queries.set(query, results);
         }
 
         queryEntities(query){
-            return this.queries.get(query);
+            return new Promise((accept, reject) => {
+                try{
+                    if (!this.queries.has(query)){
+                        console.log(`Couldn't locate query ${query}`);
+                    }
+
+                    accept(this.queries.get(query));
+                } catch(err){
+                    reject(err);
+                }
+            });
         }
     };
 })();
